@@ -5,36 +5,50 @@
 
 #include <string.h>
 
-struct page {
+typedef struct {
 	int id;
 	char url[50];
 	char *description;
-}
+} page;
 
-struct stack {
+typedef struct stack_node stack_node;
+struct stack_node{
+	int page_id;
+	stack_node *next;
+};
+
+typedef struct {
+	stack_node *head;
 	unsigned int size;
-	//de completat
-}
+} stack; //implemented as a singly linked list
 
-struct tab {
+typedef struct {
 	int id;
-	struct page *currentPage;
-	struct stack *backwardStack;
-	struct stack *forwardStack;
-}
+	page *currentPage;
+	stack *backwardStack;
+	stack *forwardStack;
+} tab;
 
-struct tabList {
+typedef struct tab_node tab_node;
+struct tab_node{
+	tab *data;
+	tab_node *prev, *next;
+};
+
+typedef struct {
+	tab_node *head; //sau *santinela???
 	unsigned int size;
-	//de completat
-}
+	//de adaugat santinela?
+} tabList; //implemented as a circular doubly linked list
 
-struct browser {
-	struct tab *current;
-	struct tabList list;
-}
+typedef struct {
+	tab *current;
+	tabList list;
+} browser;
 
 int main(void)
 {
+
 
 
 	return 0;
