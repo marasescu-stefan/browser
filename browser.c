@@ -78,11 +78,6 @@ void dll_add_last(tabList *list, tab *current)
 	list->size++;
 }
 
-/*void dll_remove_current(tabList *list, tab *current)
-{
-	
-}*/
-
 void print_browser(browser *b, FILE *output_file)
 {
     fprintf(output_file, "Tab curent:\n");
@@ -166,16 +161,16 @@ void new_tab(browser *b, page *pages)
 	/*not freeing the old stacks, because there is a reference to them
 	in the tab list, in b->list, and if the user wants to open that old
 	tab, the stacks need to remain intact*/
-	b->current->backwardStack = create_stack(); //initializing the new stacks
+	b->current->backwardStack = create_stack(); //creating the new stacks
 	b->current->forwardStack = create_stack();
 
 	dll_add_last(&b->list, b->current); //adding current tab in list
 }
 
-void close_tab(browser *b)
+void close_tab(browser *b, FILE *output_file)
 {
 	if (b->current->id == 0) {
-		printf(ERROR_MESSAGE);
+		fprintf(output_file, ERROR_MESSAGE);
 		return;
 	}
 
@@ -201,6 +196,28 @@ void close_tab(browser *b)
 
 
 	b->list.size--;
+}
+
+void open_tab(browser *b, FILE *output_file, char *command)
+{
+	tab_node *t = b->list.santinela->next; //first tab
+
+	command = command + 5; //moving command ptr at the start of the id
+	int id;
+	sscanf(command, "%d", &id);
+
+	while (t != b->list.santinela && t->data->id != id) {
+		t = t->next; //iterating through the list until i find the tab with that id
+	}
+
+	if (t == b->list.santinela) { //the tab with that id doesn't exist
+		fprintf(output_file, ERROR_MESSAGE);
+	} else { //updating the current tab
+		b->current->id = t->data->id;
+		b->current->currentPage = t->data->currentPage;
+		b->current->backwardStack = t->data->backwardStack;
+		b->current->forwardStack = t->data->forwardStack;
+	}
 }
 
 void read_pages(page *pages, unsigned int page_count, FILE *input_file)
@@ -257,9 +274,9 @@ void read_commands(FILE *input_file, FILE *output_file, browser *b, page *pages,
 		if (strcmp(command, "NEW_TAB") == 0) {
 			new_tab(b, pages);
 		} else if (strcmp(command, "CLOSE") == 0) {
-			close_tab(b);
+			close_tab(b, output_file);
 		} else if (strncmp(command, "OPEN", 4) == 0) {
-
+			open_tab(b, output_file, command);
 		} else if (strcmp(command, "NEXT") == 0) {
 			
 		} else if (strcmp(command, "PREV") == 0) {
