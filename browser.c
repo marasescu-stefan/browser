@@ -5,6 +5,8 @@
 
 #include <string.h>
 
+#include <stdbool.h>
+
 #define INPUT_FILENAME "tema1.in"
 #define OUTPUT_FILENAME "tema1.out"
 
@@ -76,6 +78,21 @@ void dll_add_last(tabList *list, tab *current)
 	list->santinela->prev = new_tab_node;
 
 	list->size++;
+}
+
+tab_node *search_current(browser *b)
+{
+	//searches b->current in the tabList and returns a pointer to the node
+	tab_node *t = b->list.santinela->next; //first tab
+
+	while (t != b->list.santinela && t->data->id != b->current->id) {
+		t = t->next; //iterating through the list until i find the tab with that id
+	}
+
+	if (t == b->list.santinela) //the tab with that id doesn't exist
+		return NULL;
+
+	return t;
 }
 
 void print_browser(browser *b, FILE *output_file)
@@ -174,11 +191,7 @@ void close_tab(browser *b, FILE *output_file)
 		return;
 	}
 
-	tab_node *t = b->list.santinela->next; //first tab
-	
-	while (t->data->id != b->current->id) { //searching the current tab by id
-		t = t->next; //iterating through the list until i find the current tab
-	}
+	tab_node *t = search_current(b);
 
 	tab_node *previous = t->prev;
 	t->prev->next = t->next;
@@ -218,6 +231,55 @@ void open_tab(browser *b, FILE *output_file, char *command)
 		b->current->backwardStack = t->data->backwardStack;
 		b->current->forwardStack = t->data->forwardStack;
 	}
+}
+
+void open_next_tab(browser *b)
+{
+	tab_node *t = search_current(b);
+
+	t = t->next; //moving t to the next tab
+	if (t == b->list.santinela)
+		t = t->next;
+
+	b->current->id = t->data->id;
+	b->current->currentPage = t->data->currentPage;
+	b->current->backwardStack = t->data->backwardStack;
+	b->current->forwardStack = t->data->forwardStack;
+}
+
+void open_previous_tab(browser *b)
+{
+	tab_node *t = search_current(b);
+
+	t = t->prev; //moving t to the previous tab
+	if (t == b->list.santinela)
+		t = t->prev;
+
+	b->current->id = t->data->id;
+	b->current->currentPage = t->data->currentPage;
+	b->current->backwardStack = t->data->backwardStack;
+	b->current->forwardStack = t->data->forwardStack;
+}
+
+void open_page(browser *b, page *pages, unsigned int page_count, FILE *output_file, char *command)
+{
+	command = command + 5;
+	int page_id;
+	sscanf(command, "%d", &page_id);
+	bool found = false;
+
+	for (unsigned int i = 0; i < page_count; i++) {
+		if (pages[i].id == page_id) {
+			b->current->currentPage = pages + i;
+			tab_node *t = search_current(b);
+			t->data->currentPage = pages + i;
+			found = true;
+			break;
+		}
+	}
+
+	if (!found)
+		fprintf(output_file, ERROR_MESSAGE);
 }
 
 void read_pages(page *pages, unsigned int page_count, FILE *input_file)
@@ -278,11 +340,11 @@ void read_commands(FILE *input_file, FILE *output_file, browser *b, page *pages,
 		} else if (strncmp(command, "OPEN", 4) == 0) {
 			open_tab(b, output_file, command);
 		} else if (strcmp(command, "NEXT") == 0) {
-			
+			open_next_tab(b);
 		} else if (strcmp(command, "PREV") == 0) {
-
+			open_previous_tab(b);
 		} else if (strncmp(command, "PAGE", 4) == 0) {
-
+			open_page(b, pages, page_count, output_file, command);
 		} else if (strcmp(command, "BACKWARD") == 0) {
 
 		} else if (strcmp(command, "FORWARD") == 0) {
