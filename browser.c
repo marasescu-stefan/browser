@@ -266,7 +266,9 @@ void open_page(browser *b, page *pages, unsigned int page_count, FILE *output_fi
 	command = command + 5;
 	int page_id;
 	sscanf(command, "%d", &page_id);
+	
 	bool found = false;
+	page *old_page = b->current->currentPage;
 
 	for (unsigned int i = 0; i < page_count; i++) {
 		if (pages[i].id == page_id) {
@@ -278,8 +280,12 @@ void open_page(browser *b, page *pages, unsigned int page_count, FILE *output_fi
 		}
 	}
 
-	if (!found)
+	if (!found) {
 		fprintf(output_file, ERROR_MESSAGE);
+		return;
+	}
+
+	//TO DO: elimin tot ce e in stiva de forward si pun in stiva de backward *old_page!! 
 }
 
 void read_pages(page *pages, unsigned int page_count, FILE *input_file)
