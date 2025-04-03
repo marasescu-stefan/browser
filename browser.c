@@ -160,14 +160,16 @@ void read_pages(page *pages, unsigned int page_count, FILE *input_file)
 
 	for (unsigned int i = 1; i <= page_count; i++) {
 		fscanf(input_file, "%d", &pages[i].id);
-		fscanf(input_file, "%s", pages[i].url);
+		fgetc(input_file); //reading the \n after the integer
+
+		fgets(pages[i].url, sizeof(pages[i].url), input_file);
+		pages[i].url[strlen(pages[i].url) - 1] = '\0';
 
 		char buffer[512];
 		fgets(buffer, sizeof(buffer), input_file);
 
 		unsigned int buffer_size = strlen(buffer);
 		buffer[buffer_size - 1] = '\0'; //remove the \n at the end
-
 		//allocating buffer_size bytes, which includes the \0 at the end
 		pages[i].description = malloc(buffer_size * sizeof(char));//sa nu uit sa eliberez!
 		if (!pages[i].description) {
@@ -182,12 +184,18 @@ void read_commands(FILE *input_file, browser *b, page *pages, unsigned int page_
 {
 	char command[256];
 	unsigned int command_count = 0;
+
 	fscanf(input_file, "%u", &command_count);
+	fgetc(input_file); //read the \n after the integer
+
+	printf("command count: %u\n", command_count);
 
 	for (unsigned int i = 0; i < command_count; i++) {
 		fgets(command, sizeof(command), input_file);
 		unsigned int command_length = strlen(command) - 1;
-		command[command_length] = '\0'; //remove the \n
+		if (i != command_count - 1) //the last line doesn't have \n (or does it?)
+			command[command_length] = '\0'; //remove the \n
+		printf("comanda este: %s\n", command);
 
 		if (strcmp(command, "NEW_TAB") == 0) {
 			new_tab(b, pages);
@@ -196,7 +204,7 @@ void read_commands(FILE *input_file, browser *b, page *pages, unsigned int page_
 		} else if (strncmp(command, "OPEN", 4) == 0) {
 
 		} else if (strcmp(command, "NEXT") == 0) {
-
+			
 		} else if (strcmp(command, "PREV") == 0) {
 
 		} else if (strncmp(command, "PAGE", 4) == 0) {
@@ -217,7 +225,9 @@ int main(void)
 {
 	FILE *input_file = fopen(INPUT_FILENAME, "rt");
 
-	if (!input_file) {
+	FILE *output_file = fopen(OUTPUT_FILENAME, "wt");
+
+	if (!input_file || !output_file) {
 		fprintf(stderr, "Could not open file");
 		exit(1);
 	}
