@@ -12,6 +12,8 @@
 #define DEFAULT_URL "https://acs.pub.ro/"
 #define DEFAULT_DESCRIPTION "Computer Science"
 
+#define ERROR_MESSAGE "403 Forbidden\n"
+
 typedef struct {
 	int id;
 	char url[50];
@@ -54,8 +56,6 @@ typedef struct {
 
 void dll_add_last(tabList *list, tab *current)
 {
-	//de facut (santinela e deja alocata, dar nu initializata)
-	//in data pun current-ul (nu cred ca e nevoie cu memcpy)
 	tab_node *new_tab_node = malloc(sizeof(tab_node));
 	if (!new_tab_node) {
 		fprintf(stderr, "Malloc failed");
@@ -77,6 +77,37 @@ void dll_add_last(tabList *list, tab *current)
 
 	list->size++;
 }
+
+/*void dll_remove_current(tabList *list, tab *current)
+{
+	
+}*/
+
+void print_browser(browser *b, FILE *output_file)
+{
+    fprintf(output_file, "Tab curent:\n");
+    fprintf(output_file, "ID-ul tab-ului curent: %d\n", b->current->id);
+    fprintf(output_file, "Pagina tab-ului curent: %p\n", b->current->currentPage);
+    fprintf(output_file, "backwardStack tab-ului curent: %p\n", b->current->backwardStack);
+    fprintf(output_file, "forwardStack tab-ului curent: %p\n", b->current->forwardStack);
+
+    fprintf(output_file, "Lista:\n");
+    fprintf(output_file, "santinela: %p\n", b->list.santinela);
+    fprintf(output_file, "size: %d\n", b->list.size);
+
+    tab_node *curr = b->list.santinela->next;
+    for (unsigned int i = 0; i < b->list.size; ++i) {
+        fprintf(output_file, "ID-ul tab-ului din nodul %u: %d\n", i, curr->data->id);
+        fprintf(output_file, "Pagina tab-ului din nodul %u: %p\n", i, curr->data->currentPage);
+        fprintf(output_file, "backwardStack tab-ului din nodul %u: %p\n", i, curr->data->backwardStack);
+        fprintf(output_file, "forwardStack tab-ului din nodul %u: %p\n", i, curr->data->forwardStack);
+
+        curr = curr->next;
+    }
+
+    fprintf(output_file, "\n");
+}
+
 
 stack *create_stack(void)
 {
@@ -129,19 +160,47 @@ browser *create_browser(page *pages)
 
 void new_tab(browser *b, page *pages)
 {
-	tab *new_tab = malloc(sizeof(tab));
-	if (!new_tab) {
-		fprintf(stderr, "Malloc failed");
-		exit(1);
-	}
-	b->current = new_tab;
-
-	b->current->id = b->list.size;
+	b->current->id = b->list.santinela->prev->data->id + 1; //last id + 1
 	b->current->currentPage = pages;
-	b->current->backwardStack = create_stack();
+
+	/*not freeing the old stacks, because there is a reference to them
+	in the tab list, in b->list, and if the user wants to open that old
+	tab, the stacks need to remain intact*/
+	b->current->backwardStack = create_stack(); //initializing the new stacks
 	b->current->forwardStack = create_stack();
 
 	dll_add_last(&b->list, b->current); //adding current tab in list
+}
+
+void close_tab(browser *b)
+{
+	if (b->current->id == 0) {
+		printf(ERROR_MESSAGE);
+		return;
+	}
+
+	tab_node *t = b->list.santinela->next; //first tab
+	
+	while (t->data->id != b->current->id) { //searching the current tab by id
+		t = t->next; //iterating through the list until i find the current tab
+	}
+
+	tab_node *previous = t->prev;
+	t->prev->next = t->next;
+	t->next->prev = t->prev;
+
+	free(t->data->forwardStack); //freeing the stacks, as they can't be used anymore
+	free(t->data->backwardStack);
+	free(t->data);
+	free(t);
+
+	b->current->id = previous->data->id;
+	b->current->currentPage = previous->data->currentPage;
+	b->current->backwardStack = previous->data->backwardStack;
+	b->current->forwardStack = previous->data->forwardStack;
+
+
+	b->list.size--;
 }
 
 void read_pages(page *pages, unsigned int page_count, FILE *input_file)
@@ -180,7 +239,7 @@ void read_pages(page *pages, unsigned int page_count, FILE *input_file)
 	}
 }
 
-void read_commands(FILE *input_file, browser *b, page *pages, unsigned int page_count)
+void read_commands(FILE *input_file, FILE *output_file, browser *b, page *pages, unsigned int page_count)
 {
 	char command[256];
 	unsigned int command_count = 0;
@@ -188,19 +247,17 @@ void read_commands(FILE *input_file, browser *b, page *pages, unsigned int page_
 	fscanf(input_file, "%u", &command_count);
 	fgetc(input_file); //read the \n after the integer
 
-	printf("command count: %u\n", command_count);
-
 	for (unsigned int i = 0; i < command_count; i++) {
 		fgets(command, sizeof(command), input_file);
 		unsigned int command_length = strlen(command) - 1;
-		if (i != command_count - 1) //the last line doesn't have \n (or does it?)
+		if (i != command_count - 1) //the last line doesn't have \n (or does it?)?????
 			command[command_length] = '\0'; //remove the \n
-		printf("comanda este: %s\n", command);
+		fprintf(output_file, "comanda este: %s\n", command);
 
 		if (strcmp(command, "NEW_TAB") == 0) {
 			new_tab(b, pages);
 		} else if (strcmp(command, "CLOSE") == 0) {
-
+			close_tab(b);
 		} else if (strncmp(command, "OPEN", 4) == 0) {
 
 		} else if (strcmp(command, "NEXT") == 0) {
@@ -214,10 +271,10 @@ void read_commands(FILE *input_file, browser *b, page *pages, unsigned int page_
 		} else if (strcmp(command, "FORWARD") == 0) {
 
 		} else if (strcmp(command, "PRINT") == 0) {
-
+			print_browser(b, output_file);
 		} else if (strncmp(command, "PRINT_HISTORY", 13) == 0) {
 
-		} 
+		}
 	}
 }
 
@@ -240,7 +297,9 @@ int main(void)
 
 	browser *b = create_browser(pages);
 
-	read_commands(input_file, b, pages, page_count);
+	read_commands(input_file, output_file, b, pages, page_count);
+
+	//functii de free
 
 	return 0;
 }
