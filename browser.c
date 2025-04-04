@@ -30,7 +30,6 @@ struct stack_node{
 
 typedef struct {
 	stack_node *head;
-	unsigned int size;
 } stack; //implemented as a singly linked list
 
 typedef struct {
@@ -95,11 +94,70 @@ tab_node *search_current(browser *b)
 	return t;
 }
 
-void print_browser(browser *b, FILE *output_file)
+stack *create_stack(void)
+{
+	stack *s = malloc(sizeof(stack));
+	if (!s) {
+        fprintf(stderr, "Malloc failed");
+        exit(1);
+    }
+	s->head = NULL;
+
+	return s;
+}
+void push(stack *s, page *p)
+{
+	if (s == NULL)
+		return;
+
+	stack_node *new_node = malloc(sizeof(stack_node));
+	if (!new_node) {
+		fprintf(stderr, "Malloc failed");
+		exit(1);
+	}
+
+	new_node->value = p;
+	if (s->head == NULL) {
+		new_node->next = NULL;
+		s->head = new_node;
+	} else {
+		new_node->next = s->head;
+		s->head = new_node;
+	}
+}
+
+void pop(stack *s)
+{
+	if (s == NULL || s->head == NULL)
+		return;
+
+	stack_node *removed = s->head;
+	s->head = removed->next;
+	free(removed);
+}
+
+void free_stack_list(stack *s)
+{
+	if (s == NULL || s->head == NULL)
+		return;
+
+	while (s->head != NULL)
+		pop(s);
+}
+
+page *peek(stack *s)
+{
+	if (s == NULL || s->head == NULL)
+		return NULL;
+
+	return s->head->value;
+}
+
+/*void print_browser(browser *b, FILE *output_file)
 {
     fprintf(output_file, "Tab curent:\n");
     fprintf(output_file, "ID-ul tab-ului curent: %d\n", b->current->id);
-    fprintf(output_file, "Pagina tab-ului curent: %p\n", b->current->currentPage);
+    fprintf(output_file, "Pagina tab-ului curent: %d\n", b->current->currentPage->id);
     fprintf(output_file, "backwardStack tab-ului curent: %p\n", b->current->backwardStack);
     fprintf(output_file, "forwardStack tab-ului curent: %p\n", b->current->forwardStack);
 
@@ -110,7 +168,7 @@ void print_browser(browser *b, FILE *output_file)
     tab_node *curr = b->list.santinela->next;
     for (unsigned int i = 0; i < b->list.size; ++i) {
         fprintf(output_file, "ID-ul tab-ului din nodul %u: %d\n", i, curr->data->id);
-        fprintf(output_file, "Pagina tab-ului din nodul %u: %p\n", i, curr->data->currentPage);
+        fprintf(output_file, "Pagina tab-ului din nodul %u: %d\n", i, curr->data->currentPage->id);
         fprintf(output_file, "backwardStack tab-ului din nodul %u: %p\n", i, curr->data->backwardStack);
         fprintf(output_file, "forwardStack tab-ului din nodul %u: %p\n", i, curr->data->forwardStack);
 
@@ -118,21 +176,7 @@ void print_browser(browser *b, FILE *output_file)
     }
 
     fprintf(output_file, "\n");
-}
-
-
-stack *create_stack(void)
-{
-	stack *s = malloc(sizeof(stack));
-	if (!s) {
-        fprintf(stderr, "Malloc failed");
-        exit(1);
-    }
-	s->head = NULL;
-	s->size = 0;
-
-	return s;
-}
+} */
 
 browser *create_browser(page *pages)
 {
@@ -268,7 +312,7 @@ void open_page(browser *b, page *pages, unsigned int page_count, FILE *output_fi
 	sscanf(command, "%d", &page_id);
 	
 	bool found = false;
-	page *old_page = b->current->currentPage;
+	page *old_page = b->current->currentPage; //points to one element in the pages array
 
 	for (unsigned int i = 0; i < page_count; i++) {
 		if (pages[i].id == page_id) {
@@ -285,7 +329,42 @@ void open_page(browser *b, page *pages, unsigned int page_count, FILE *output_fi
 		return;
 	}
 
-	//TO DO: elimin tot ce e in stiva de forward si pun in stiva de backward *old_page!! 
+	push(b->current->backwardStack, old_page);
+	free_stack_list(b->current->forwardStack);
+}
+
+void open_backward_page(browser *b, FILE *output_file)
+{
+	if (b->current->backwardStack->head == NULL) { //stack is empty
+		fprintf(output_file, ERROR_MESSAGE);
+		return;
+	}
+
+	push(b->current->forwardStack, b->current->currentPage);
+	b->current->currentPage = peek(b->current->backwardStack);
+	pop(b->current->backwardStack);
+}
+
+void open_forward_page(browser *b, FILE *output_file)
+{
+	if (b->current->forwardStack->head == NULL) {
+		fprintf(output_file, ERROR_MESSAGE);
+		return;
+	}
+
+	push(b->current->backwardStack, b->current->currentPage);
+	b->current->currentPage = peek(b->current->forwardStack);
+	pop(b->current->forwardStack);
+}
+
+void print(browser *b, FILE *output_file)
+{
+
+}
+
+void print_history(browser *b, FILE *output_file, char *command)
+{
+
 }
 
 void read_pages(page *pages, unsigned int page_count, FILE *input_file)
@@ -302,7 +381,7 @@ void read_pages(page *pages, unsigned int page_count, FILE *input_file)
 	}
 	strcpy(pages[0].description, description);
 
-	for (unsigned int i = 1; i <= page_count; i++) {
+	for (unsigned int i = 1; i < page_count; i++) {
 		fscanf(input_file, "%d", &pages[i].id);
 		fgetc(input_file); //reading the \n after the integer
 
@@ -352,13 +431,13 @@ void read_commands(FILE *input_file, FILE *output_file, browser *b, page *pages,
 		} else if (strncmp(command, "PAGE", 4) == 0) {
 			open_page(b, pages, page_count, output_file, command);
 		} else if (strcmp(command, "BACKWARD") == 0) {
-
+			open_backward_page(b, output_file);
 		} else if (strcmp(command, "FORWARD") == 0) {
-
+			open_forward_page(b, output_file);
 		} else if (strcmp(command, "PRINT") == 0) {
-			print_browser(b, output_file);
+			print(b, output_file);
 		} else if (strncmp(command, "PRINT_HISTORY", 13) == 0) {
-
+			print_history(b, output_file, command);
 		}
 	}
 }
@@ -376,6 +455,7 @@ int main(void)
 
 	unsigned int page_count = 0;
 	fscanf(input_file, "%u", &page_count);
+	page_count++; //incrementing beacuse pages[0] is the default page
 
 	page pages[51];
 	read_pages(pages, page_count, input_file);
