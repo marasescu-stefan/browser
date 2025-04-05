@@ -189,7 +189,7 @@ browser *create_browser(page *pages)
 
 	b->current->id = 0;
 
-	b->current->currentPage = pages; //indica la adresa lui pages[0]
+	b->current->currentPage = pages; //points to the address of pages[0]
 	b->current->backwardStack = create_stack();
 	b->current->forwardStack = create_stack();
 
@@ -285,6 +285,10 @@ void open_tab(browser *b, FILE *output_file, char *command)
 {
 	tab_node *t = b->list.santinela->next; //first tab
 
+	if (strlen(command) < 6) {
+		fprintf(output_file, ERROR_MESSAGE);
+		return;
+	}
 	command = command + 5; //moving command ptr at the start of the id
 	int id;
 	sscanf(command, "%d", &id);
@@ -410,6 +414,10 @@ void print_history(browser *b, FILE *output_file, char *command)
 {
 	tab_node *t = b->list.santinela->next; //first tab
 
+	if (strlen(command) < 15) {
+		fprintf(output_file, ERROR_MESSAGE);
+		return;
+	}
 	command = command + 14; //moving command ptr at the start of the id
 	int id;
 	sscanf(command, "%d", &id);
@@ -455,7 +463,7 @@ void read_pages(page *pages, unsigned int page_count, FILE *input_file)
 		unsigned int buffer_size = strlen(buffer);
 		buffer[buffer_size - 1] = '\0'; //remove the \n at the end
 		//allocating buffer_size bytes, which includes the \0 at the end
-		pages[i].description = malloc(buffer_size * sizeof(char));//sa nu uit sa eliberez!
+		pages[i].description = malloc(buffer_size * sizeof(char));
 		if (!pages[i].description) {
 			fprintf(stderr, "Malloc failed");
 			exit(1);
@@ -464,7 +472,7 @@ void read_pages(page *pages, unsigned int page_count, FILE *input_file)
 	}
 }
 
-void debug(browser *b, FILE *output_file)
+/*void debug(browser *b, FILE *output_file)
 {
 	fprintf(output_file, "Browser:\n");
     fprintf(output_file, "current_tab_id: %d\n", b->current->id);
@@ -474,7 +482,7 @@ void debug(browser *b, FILE *output_file)
     fprintf(output_file, "forward_stack:\n");
     print_list(b->current->forwardStack->head, output_file);
 	fprintf(output_file, "\n");
-}
+} */
 
 void read_commands(FILE *input_file, FILE *output_file, browser *b, page *pages, unsigned int page_count)
 {
@@ -487,7 +495,7 @@ void read_commands(FILE *input_file, FILE *output_file, browser *b, page *pages,
 	for (unsigned int i = 0; i < command_count; i++) {
 		fgets(command, sizeof(command), input_file);
 		unsigned int command_length = strlen(command) - 1;
-		if (i != command_count - 1) //the last line doesn't have \n (or does it?)?????
+		if (i != command_count - 1) //the last line doesn't have \n
 			command[command_length] = '\0'; //remove the \n
 		if (strcmp(command, "NEW_TAB") == 0) {
 			new_tab(b, pages);
@@ -537,7 +545,7 @@ int main(void)
 
 	free_browser(&b);
 	free_pages(pages, page_count);
-	
+
 	fclose(input_file);
 	fclose(output_file);
 
