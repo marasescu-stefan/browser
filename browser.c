@@ -153,30 +153,25 @@ page *peek(stack *s)
 	return s->head->value;
 }
 
-/*void print_browser(browser *b, FILE *output_file)
+void print_list_reversed(stack_node *head, FILE *output_file)
 {
-    fprintf(output_file, "Tab curent:\n");
-    fprintf(output_file, "ID-ul tab-ului curent: %d\n", b->current->id);
-    fprintf(output_file, "Pagina tab-ului curent: %d\n", b->current->currentPage->id);
-    fprintf(output_file, "backwardStack tab-ului curent: %p\n", b->current->backwardStack);
-    fprintf(output_file, "forwardStack tab-ului curent: %p\n", b->current->forwardStack);
+	if (head == NULL)
+	    return;
 
-    fprintf(output_file, "Lista:\n");
-    fprintf(output_file, "santinela: %p\n", b->list.santinela);
-    fprintf(output_file, "size: %d\n", b->list.size);
+    print_list_reversed(head->next, output_file);
+	fprintf(output_file, "%s\n", head->value->url);
+}
 
-    tab_node *curr = b->list.santinela->next;
-    for (unsigned int i = 0; i < b->list.size; ++i) {
-        fprintf(output_file, "ID-ul tab-ului din nodul %u: %d\n", i, curr->data->id);
-        fprintf(output_file, "Pagina tab-ului din nodul %u: %d\n", i, curr->data->currentPage->id);
-        fprintf(output_file, "backwardStack tab-ului din nodul %u: %p\n", i, curr->data->backwardStack);
-        fprintf(output_file, "forwardStack tab-ului din nodul %u: %p\n", i, curr->data->forwardStack);
+void print_list(stack_node *head, FILE *output_file)
+{
+	if (head == NULL)
+        return;
 
-        curr = curr->next;
+    while (head != NULL) {
+        fprintf(output_file, "%s\n", head->value->url);
+        head = head->next;
     }
-
-    fprintf(output_file, "\n");
-} */
+}
 
 browser *create_browser(page *pages)
 {
@@ -214,6 +209,35 @@ browser *create_browser(page *pages)
 	return b;
 }
 
+void free_browser(browser **b)
+{
+    free((*b)->current); //first field
+
+	tab_node *curr = (*b)->list.santinela->next; //first tab
+
+	while (curr != (*b)->list.santinela) {
+		tab_node *next = curr->next;
+		free_stack_list(curr->data->forwardStack); //freeing the stack list
+		free_stack_list(curr->data->backwardStack); //freeing the stack list
+		free(curr->data->forwardStack); //freeing the stack structure
+		free(curr->data->backwardStack); //freeing the stack structure
+		free(curr->data);
+		free(curr);
+		curr = next;
+	}
+
+	free((*b)->list.santinela);
+
+	free(*b); //free the browser structure
+}
+
+void free_pages(page *pages, unsigned int pages_count)
+{
+	for (unsigned int i = 0; i < pages_count; i++) {
+        free(pages[i].description);
+    }
+}
+
 void new_tab(browser *b, page *pages)
 {
 	b->current->id = b->list.santinela->prev->data->id + 1; //last id + 1
@@ -241,8 +265,10 @@ void close_tab(browser *b, FILE *output_file)
 	t->prev->next = t->next;
 	t->next->prev = t->prev;
 
-	free(t->data->forwardStack); //freeing the stacks, as they can't be used anymore
-	free(t->data->backwardStack);
+	free_stack_list(t->data->forwardStack); //freeing the stack list
+    free_stack_list(t->data->backwardStack); //freeing the stack list
+	free(t->data->forwardStack); //freeing the stack structure
+	free(t->data->backwardStack); //freeing the stack structure
 	free(t->data);
 	free(t);
 
@@ -342,6 +368,8 @@ void open_backward_page(browser *b, FILE *output_file)
 
 	push(b->current->forwardStack, b->current->currentPage);
 	b->current->currentPage = peek(b->current->backwardStack);
+	tab_node *t = search_current(b);
+	t->data->currentPage = peek(b->current->backwardStack);
 	pop(b->current->backwardStack);
 }
 
@@ -354,17 +382,50 @@ void open_forward_page(browser *b, FILE *output_file)
 
 	push(b->current->backwardStack, b->current->currentPage);
 	b->current->currentPage = peek(b->current->forwardStack);
+	tab_node *t = search_current(b);
+	t->data->currentPage = peek(b->current->forwardStack);
 	pop(b->current->forwardStack);
 }
 
 void print(browser *b, FILE *output_file)
 {
+	tab_node *current = search_current(b); //current tab node
+	fprintf(output_file, "%d ", current->data->id); //print the current tab id
 
+	tab_node *t = current->next;
+	while (t != current) {
+		if (t == b->list.santinela) {
+			t = t->next; //skip the santinela
+		} else {
+			fprintf(output_file, "%d ", t->data->id);
+        	t = t->next;
+		}
+	}
+
+	fprintf(output_file, "\n");
+	fprintf(output_file, "%s\n", current->data->currentPage->description);
 }
 
 void print_history(browser *b, FILE *output_file, char *command)
 {
+	tab_node *t = b->list.santinela->next; //first tab
 
+	command = command + 14; //moving command ptr at the start of the id
+	int id;
+	sscanf(command, "%d", &id);
+
+	while (t != b->list.santinela && t->data->id != id) {
+		t = t->next; //iterating through the list until i find the tab with that id
+	}
+
+	if (t == b->list.santinela) { //the tab with that id doesn't exist
+		fprintf(output_file, ERROR_MESSAGE);
+		return;
+	}
+
+	print_list_reversed(t->data->forwardStack->head, output_file);
+	fprintf(output_file, "%s\n", t->data->currentPage->url);
+	print_list(t->data->backwardStack->head, output_file);
 }
 
 void read_pages(page *pages, unsigned int page_count, FILE *input_file)
@@ -403,6 +464,18 @@ void read_pages(page *pages, unsigned int page_count, FILE *input_file)
 	}
 }
 
+void debug(browser *b, FILE *output_file)
+{
+	fprintf(output_file, "Browser:\n");
+    fprintf(output_file, "current_tab_id: %d\n", b->current->id);
+    fprintf(output_file, "current_page_id: %d\n", b->current->currentPage->id);
+    fprintf(output_file, "backward_stack:\n");
+    print_list(b->current->backwardStack->head, output_file);
+    fprintf(output_file, "forward_stack:\n");
+    print_list(b->current->forwardStack->head, output_file);
+	fprintf(output_file, "\n");
+}
+
 void read_commands(FILE *input_file, FILE *output_file, browser *b, page *pages, unsigned int page_count)
 {
 	char command[256];
@@ -416,8 +489,6 @@ void read_commands(FILE *input_file, FILE *output_file, browser *b, page *pages,
 		unsigned int command_length = strlen(command) - 1;
 		if (i != command_count - 1) //the last line doesn't have \n (or does it?)?????
 			command[command_length] = '\0'; //remove the \n
-		fprintf(output_file, "comanda este: %s\n", command);
-
 		if (strcmp(command, "NEW_TAB") == 0) {
 			new_tab(b, pages);
 		} else if (strcmp(command, "CLOSE") == 0) {
@@ -464,7 +535,8 @@ int main(void)
 
 	read_commands(input_file, output_file, b, pages, page_count);
 
-	//functii de free
+	free_browser(&b);
+	free_pages(pages, page_count);
 
 	return 0;
 }
