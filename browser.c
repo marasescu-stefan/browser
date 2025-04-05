@@ -537,6 +537,9 @@ int main(void)
 
 	free_browser(&b);
 	free_pages(pages, page_count);
+	
+	fclose(input_file);
+	fclose(output_file);
 
 	return 0;
 }
