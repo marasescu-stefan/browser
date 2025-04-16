@@ -238,9 +238,10 @@ void free_pages(page *pages, unsigned int pages_count)
     }
 }
 
-void new_tab(browser *b, page *pages)
+void new_tab(browser *b, page *pages, int *last_id)
 {
-	b->current->id = b->list.santinela->prev->data->id + 1; //last id + 1
+	(*last_id)++;
+	b->current->id = *last_id;
 	b->current->currentPage = pages;
 
 	/*not freeing the old stacks, because there is a reference to them
@@ -472,22 +473,11 @@ void read_pages(page *pages, unsigned int page_count, FILE *input_file)
 	}
 }
 
-/*void debug(browser *b, FILE *output_file)
-{
-	fprintf(output_file, "Browser:\n");
-    fprintf(output_file, "current_tab_id: %d\n", b->current->id);
-    fprintf(output_file, "current_page_id: %d\n", b->current->currentPage->id);
-    fprintf(output_file, "backward_stack:\n");
-    print_list(b->current->backwardStack->head, output_file);
-    fprintf(output_file, "forward_stack:\n");
-    print_list(b->current->forwardStack->head, output_file);
-	fprintf(output_file, "\n");
-} */
-
 void read_commands(FILE *input_file, FILE *output_file, browser *b, page *pages, unsigned int page_count)
 {
 	char command[256];
 	unsigned int command_count = 0;
+	int last_id = 0;
 
 	fscanf(input_file, "%u", &command_count);
 	fgetc(input_file); //read the \n after the integer
@@ -497,7 +487,7 @@ void read_commands(FILE *input_file, FILE *output_file, browser *b, page *pages,
 		unsigned int command_length = strlen(command) - 1;
 		command[command_length] = '\0'; //remove the \n
 		if (strcmp(command, "NEW_TAB") == 0) {
-			new_tab(b, pages);
+			new_tab(b, pages, &last_id);
 		} else if (strcmp(command, "CLOSE") == 0) {
 			close_tab(b, output_file);
 		} else if (strncmp(command, "OPEN", 4) == 0) {
