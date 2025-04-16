@@ -394,14 +394,14 @@ void open_forward_page(browser *b, FILE *output_file)
 void print(browser *b, FILE *output_file)
 {
 	tab_node *current = search_current(b); //current tab node
-	fprintf(output_file, "%d ", current->data->id); //print the current tab id
+	fprintf(output_file, "%d", current->data->id); //print the current tab id
 
 	tab_node *t = current->next;
 	while (t != current) {
 		if (t == b->list.santinela) {
 			t = t->next; //skip the santinela
 		} else {
-			fprintf(output_file, "%d ", t->data->id);
+			fprintf(output_file, " %d", t->data->id);
         	t = t->next;
 		}
 	}
@@ -495,8 +495,7 @@ void read_commands(FILE *input_file, FILE *output_file, browser *b, page *pages,
 	for (unsigned int i = 0; i < command_count; i++) {
 		fgets(command, sizeof(command), input_file);
 		unsigned int command_length = strlen(command) - 1;
-		if (i != command_count - 1) //the last line doesn't have \n
-			command[command_length] = '\0'; //remove the \n
+		command[command_length] = '\0'; //remove the \n
 		if (strcmp(command, "NEW_TAB") == 0) {
 			new_tab(b, pages);
 		} else if (strcmp(command, "CLOSE") == 0) {
