@@ -1,20 +1,20 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -std=c99
 
-TARGETS=tema1
+TARGETS=browser
 
 build: $(TARGETS)
 
 tema1: browser.c
-	$(CC) $(CFLAGS) *.c -o tema1 -lm
+        $(CC) $(CFLAGS) *.c -o browser -lm
 
-run: tema1
-	./$(TARGETS)
+run: browser
+        ./$(TARGETS)
 
 pack:
-	zip -FSr 311CA_MarasescuStefan_Tema1.zip Makefile README *.c *.h
+        zip -FSr 311CA_MarasescuStefan_Tema1.zip Makefile README *.c *.h
 
 clean:
-	rm -f $(TARGETS)
+        rm -f $(TARGETS)
 
 .PHONY: pack clean
