@@ -23,7 +23,7 @@ typedef struct {
 } page;
 
 typedef struct stack_node stack_node;
-struct stack_node{
+struct stack_node {
 	page *value;
 	stack_node *next;
 };
@@ -85,7 +85,8 @@ tab_node *search_current(browser *b)
 	tab_node *t = b->list.santinela->next; //first tab
 
 	while (t != b->list.santinela && t->data->id != b->current->id) {
-		t = t->next; //iterating through the list until i find the tab with that id
+		//iterating through the list until i find the tab with that id
+		t = t->next;
 	}
 
 	if (t == b->list.santinela) //the tab with that id doesn't exist
@@ -98,16 +99,17 @@ stack *create_stack(void)
 {
 	stack *s = malloc(sizeof(stack));
 	if (!s) {
-        fprintf(stderr, "Malloc failed");
-        exit(1);
-    }
+		fprintf(stderr, "Malloc failed");
+		exit(1);
+	}
 	s->head = NULL;
 
 	return s;
 }
+
 void push(stack *s, page *p)
 {
-	if (s == NULL)
+	if (!s)
 		return;
 
 	stack_node *new_node = malloc(sizeof(stack_node));
@@ -117,7 +119,7 @@ void push(stack *s, page *p)
 	}
 
 	new_node->value = p;
-	if (s->head == NULL) {
+	if (!s->head) {
 		new_node->next = NULL;
 		s->head = new_node;
 	} else {
@@ -128,7 +130,7 @@ void push(stack *s, page *p)
 
 void pop(stack *s)
 {
-	if (s == NULL || s->head == NULL)
+	if (!s || !s->head)
 		return;
 
 	stack_node *removed = s->head;
@@ -138,16 +140,16 @@ void pop(stack *s)
 
 void free_stack_list(stack *s)
 {
-	if (s == NULL || s->head == NULL)
+	if (!s || !s->head)
 		return;
 
-	while (s->head != NULL)
+	while (s->head)
 		pop(s);
 }
 
 page *peek(stack *s)
 {
-	if (s == NULL || s->head == NULL)
+	if (!s || !s->head)
 		return NULL;
 
 	return s->head->value;
@@ -155,22 +157,22 @@ page *peek(stack *s)
 
 void print_list_reversed(stack_node *head, FILE *output_file)
 {
-	if (head == NULL)
+	if (!head)
 	    return;
 
-    print_list_reversed(head->next, output_file);
+	print_list_reversed(head->next, output_file);
 	fprintf(output_file, "%s\n", head->value->url);
 }
 
 void print_list(stack_node *head, FILE *output_file)
 {
-	if (head == NULL)
-        return;
+	if (!head)
+		return;
 
-    while (head != NULL) {
-        fprintf(output_file, "%s\n", head->value->url);
-        head = head->next;
-    }
+	while (head) {
+		fprintf(output_file, "%s\n", head->value->url);
+		head = head->next;
+	}
 }
 
 browser *create_browser(page *pages)
@@ -211,7 +213,7 @@ browser *create_browser(page *pages)
 
 void free_browser(browser **b)
 {
-    free((*b)->current); //first field
+	free((*b)->current); //first field
 
 	tab_node *curr = (*b)->list.santinela->next; //first tab
 
@@ -228,14 +230,14 @@ void free_browser(browser **b)
 
 	free((*b)->list.santinela);
 
-	free(*b); //free the browser structure
+	free(*b); //free the browser structurea
 }
 
 void free_pages(page *pages, unsigned int pages_count)
 {
 	for (unsigned int i = 0; i < pages_count; i++) {
-        free(pages[i].description);
-    }
+		free(pages[i].description);
+	}
 }
 
 void new_tab(browser *b, page *pages, int *last_id)
@@ -267,7 +269,7 @@ void close_tab(browser *b, FILE *output_file)
 	t->next->prev = t->prev;
 
 	free_stack_list(t->data->forwardStack); //freeing the stack list
-    free_stack_list(t->data->backwardStack); //freeing the stack list
+	free_stack_list(t->data->backwardStack); //freeing the stack list
 	free(t->data->forwardStack); //freeing the stack structure
 	free(t->data->backwardStack); //freeing the stack structure
 	free(t->data);
@@ -277,7 +279,6 @@ void close_tab(browser *b, FILE *output_file)
 	b->current->currentPage = previous->data->currentPage;
 	b->current->backwardStack = previous->data->backwardStack;
 	b->current->forwardStack = previous->data->forwardStack;
-
 
 	b->list.size--;
 }
@@ -292,10 +293,12 @@ void open_tab(browser *b, FILE *output_file, char *command)
 	}
 	command = command + 5; //moving command ptr at the start of the id
 	int id;
-	sscanf(command, "%d", &id);
+	if (sscanf(command, "%d", &id) != 1)
+		return;
 
 	while (t != b->list.santinela && t->data->id != id) {
-		t = t->next; //iterating through the list until i find the tab with that id
+		//iterating through the list until i find the tab with that id
+		t = t->next;
 	}
 
 	if (t == b->list.santinela) { //the tab with that id doesn't exist
@@ -336,14 +339,16 @@ void open_previous_tab(browser *b)
 	b->current->forwardStack = t->data->forwardStack;
 }
 
-void open_page(browser *b, page *pages, unsigned int page_count, FILE *output_file, char *command)
+void open_page(browser *b, page *pages, unsigned int page_count,
+			   FILE *output_file, char *command)
 {
 	command = command + 5;
 	int page_id;
-	sscanf(command, "%d", &page_id);
-	
+	if (sscanf(command, "%d", &page_id) != 1)
+		return;
+
 	bool found = false;
-	page *old_page = b->current->currentPage; //points to one element in the pages array
+	page *old_page = b->current->currentPage;
 
 	for (unsigned int i = 0; i < page_count; i++) {
 		if (pages[i].id == page_id) {
@@ -366,7 +371,7 @@ void open_page(browser *b, page *pages, unsigned int page_count, FILE *output_fi
 
 void open_backward_page(browser *b, FILE *output_file)
 {
-	if (b->current->backwardStack->head == NULL) { //stack is empty
+	if (!b->current->backwardStack->head) { //stack is empty
 		fprintf(output_file, ERROR_MESSAGE);
 		return;
 	}
@@ -380,7 +385,7 @@ void open_backward_page(browser *b, FILE *output_file)
 
 void open_forward_page(browser *b, FILE *output_file)
 {
-	if (b->current->forwardStack->head == NULL) {
+	if (!b->current->forwardStack->head) {
 		fprintf(output_file, ERROR_MESSAGE);
 		return;
 	}
@@ -403,7 +408,7 @@ void print(browser *b, FILE *output_file)
 			t = t->next; //skip the santinela
 		} else {
 			fprintf(output_file, " %d", t->data->id);
-        	t = t->next;
+			t = t->next;
 		}
 	}
 
@@ -421,10 +426,12 @@ void print_history(browser *b, FILE *output_file, char *command)
 	}
 	command = command + 14; //moving command ptr at the start of the id
 	int id;
-	sscanf(command, "%d", &id);
+	if (sscanf(command, "%d", &id) != 1)
+		return;
 
 	while (t != b->list.santinela && t->data->id != id) {
-		t = t->next; //iterating through the list until i find the tab with that id
+		//iterating through the list until i find the tab with that id
+		t = t->next;
 	}
 
 	if (t == b->list.santinela) { //the tab with that id doesn't exist
@@ -473,7 +480,8 @@ void read_pages(page *pages, unsigned int page_count, FILE *input_file)
 	}
 }
 
-void read_commands(FILE *input_file, FILE *output_file, browser *b, page *pages, unsigned int page_count)
+void read_commands(FILE *input_file, FILE *output_file,
+				   browser *b, page *pages, unsigned int page_count)
 {
 	char command[256];
 	unsigned int command_count = 0;
