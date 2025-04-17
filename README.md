@@ -4,8 +4,6 @@
 
 The provided program works as a browser that can open and close tabs, each with its individual ID, and switch between them by going to the next or previous opened tab, or a specified one. The browser also supports opening one of the pages given as input in the input file named `"tema1.in"` with a specified ID, and accessing previously opened pages by going forward or backward. It also provides the possibility to print all the IDs of the currently opened tabs, circularly, starting from the current tab and going to the right, and to print the history of the accessed pages within the current tab, starting with the last forward page and going towards the first backward page, all the outputs being printed to the file `"tema1.out"`.
 
-Sure! Here's the **usage explanation in Markdown format** that you can copy directly into your `README.md`:
-
 ---
 
 ## Usage
