@@ -1,4 +1,4 @@
-//Marasescu Stefan-Gabriel, 311CA
+//MARASESCU Stefan-Gabriel - 311CA
 #include <stdio.h>
 
 #include <stdlib.h>
