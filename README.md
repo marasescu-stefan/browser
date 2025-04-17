@@ -4,6 +4,48 @@
 
 The provided program works as a browser that can open and close tabs, each with its individual ID, and switch between them by going to the next or previous opened tab, or a specified one. The browser also supports opening one of the pages given as input in the input file named `"tema1.in"` with a specified ID, and accessing previously opened pages by going forward or backward. It also provides the possibility to print all the IDs of the currently opened tabs, circularly, starting from the current tab and going to the right, and to print the history of the accessed pages within the current tab, starting with the last forward page and going towards the first backward page, all the outputs being printed to the file `"tema1.out"`.
 
+Sure! Here's the **usage explanation in Markdown format** that you can copy directly into your `README.md`:
+
+---
+
+## Usage
+
+### 1. **Build the project**
+To compile the project and generate the executable `browser`, run:
+
+```bash
+make build
+```
+
+This will compile all `.c` files into the `browser` executable.
+
+### 2. **Run the program**
+To execute the compiled program:
+
+```bash
+make run
+```
+
+This will run the `browser` executable (`./browser`).
+
+### 3. **Package the project**
+To create a zip file containing the `Makefile`, `README`, and all `.c` and `.h` files:
+
+```bash
+make pack
+```
+
+This will create a zip file named `311CA_MarasescuStefan_Tema1.zip`.
+
+### 4. **Clean up**
+To remove the compiled `browser` executable:
+
+```bash
+make clean
+```
+
+This will delete the `browser` executable from your project directory.
+
 ---
 
 ### Data Structures
